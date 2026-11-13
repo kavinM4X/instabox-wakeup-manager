@@ -207,3 +207,5 @@ All scripts follow standardized UNIX exit codes:
 
 For secret rotation instructions, least-privilege scope recommendations, and vulnerability reporting procedures, see [SECURITY.md](SECURITY.md).
 
+#   i n s t a b o x - w a k e u p - m a n a g e r  
+ 
