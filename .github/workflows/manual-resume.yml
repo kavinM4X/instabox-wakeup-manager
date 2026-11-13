@@ -1,0 +1,58 @@
+name: InstaBox Manual Resume
+
+on:
+  # Exclusively manually triggered by authorized users
+  workflow_dispatch:
+    inputs:
+      machine_name:
+        description: 'InstaBox machine name to resume (leave blank for default)'
+        required: false
+        default: ''
+      reason:
+        description: 'Reason for manual resume session'
+        required: false
+        default: 'Interactive development session'
+
+concurrency:
+  # Prevent conflicting concurrent resume commands
+  group: instabox-resume-operation
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  manual-resume:
+    name: Resume Paused Machine
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install InstaBox CLI
+        run: |
+          npm install -g instabox
+          echo "$(npm config get prefix)/bin" >> "$GITHUB_PATH"
+
+      - name: Verify CLI Installation
+        run: |
+          instabox --version
+
+      - name: Set script permissions
+        run: |
+          chmod +x scripts/*.sh
+
+      - name: Execute Machine Resume
+        env:
+          INSTABOX_API_KEY: ${{ secrets.INSTABOX_API_KEY }}
+          INSTABOX_MACHINE: ${{ github.event.inputs.machine_name != '' && github.event.inputs.machine_name || vars.INSTABOX_MACHINE || secrets.INSTABOX_MACHINE || 'test-app' }}
+        run: |
+          ./scripts/resume-machine.sh
+

@@ -1,0 +1,57 @@
+name: InstaBox Machine Status Monitor
+
+on:
+  # Allow manual trigger on demand
+  workflow_dispatch:
+    inputs:
+      machine_name:
+        description: 'InstaBox machine name to check (leave blank for default)'
+        required: false
+        default: ''
+  # Periodic non-intrusive status check (every 16 minutes)
+  # COMPLIANCE: Read-only monitoring. Does NOT resume or attempt to defeat auto-pause.
+  schedule:
+    - cron: '*/16 * * * *'
+
+concurrency:
+  group: instabox-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-status:
+    name: Check Machine Status
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install InstaBox CLI
+        run: |
+          npm install -g instabox
+          echo "$(npm config get prefix)/bin" >> "$GITHUB_PATH"
+
+      - name: Verify CLI Installation
+        run: |
+          instabox --version
+
+      - name: Set script permissions
+        run: |
+          chmod +x scripts/*.sh
+
+      - name: Run Machine Status Check
+        env:
+          INSTABOX_API_KEY: ${{ secrets.INSTABOX_API_KEY }}
+          INSTABOX_MACHINE: ${{ github.event.inputs.machine_name != '' && github.event.inputs.machine_name || vars.INSTABOX_MACHINE || secrets.INSTABOX_MACHINE || 'test-app' }}
+        run: |
+          ./scripts/check-machine.sh
+
